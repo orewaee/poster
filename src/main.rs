@@ -2,8 +2,10 @@ use clap::{Parser, Subcommand};
 
 use crate::app::http;
 use crate::app::params::HttpParamsBuilder;
+use crate::init::utils::init;
 
 mod app;
+mod init;
 
 #[derive(Parser)]
 pub struct Cli {
@@ -20,6 +22,7 @@ pub enum Commands {
         #[arg(long)]
         port: Option<u16>,
     },
+    Init {},
 }
 
 #[tokio::main]
@@ -42,5 +45,6 @@ async fn main() {
             let params = params_builder.build().expect("failed to build params");
             http::run(params).await;
         }
+        Commands::Init {} => init().expect("failed to init"),
     }
 }

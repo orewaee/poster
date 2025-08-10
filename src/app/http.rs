@@ -22,7 +22,7 @@ pub async fn run(params: HttpParams) {
 }
 
 #[derive(Template)]
-#[template(path = "base.html")]
+#[template(path = "post.html")]
 struct PostTemplate {
     content: String,
 }
