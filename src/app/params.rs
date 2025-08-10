@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HttpParams {
     pub host: String,
     pub port: u16,
@@ -21,6 +21,7 @@ pub struct HttpParamsBuilder {
     params: HttpParams,
 }
 
+#[derive(Debug)]
 pub enum HttpParamsError {
     InvalidHost,
     InvalidPort,
@@ -33,7 +34,7 @@ impl HttpParamsBuilder {
         }
     }
 
-    pub fn host(mut self, host: String) -> Result<Self, HttpParamsError> {
+    pub fn host(&mut self, host: String) -> Result<&mut Self, HttpParamsError> {
         if host.is_empty() {
             return Err(HttpParamsError::InvalidHost);
         }
@@ -42,7 +43,7 @@ impl HttpParamsBuilder {
         Ok(self)
     }
 
-    pub fn port(mut self, port: u16) -> Result<Self, HttpParamsError> {
+    pub fn port(&mut self, port: u16) -> Result<&mut Self, HttpParamsError> {
         if port == 0 {
             return Err(HttpParamsError::InvalidPort);
         }
@@ -51,8 +52,12 @@ impl HttpParamsBuilder {
         Ok(self)
     }
 
-    pub fn static_path(mut self, path: PathBuf) -> Result<Self, HttpParamsError> {
+    pub fn static_path(&mut self, path: PathBuf) -> Result<&mut Self, HttpParamsError> {
         self.params.static_path = path;
         Ok(self)
+    }
+
+    pub fn build(&self) -> Result<HttpParams, HttpParamsError> {
+        Ok(self.params.clone())
     }
 }
