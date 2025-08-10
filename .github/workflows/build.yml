@@ -1,0 +1,22 @@
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update
+      - run: cargo build --release
+      - name: Archive binaries
+        run: tar -czvf linux-binaries.tar.gz -C ./target/release/ .
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
+        with:
+          append_body: true
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          files: |
+            linux-binaries.tar.gz
