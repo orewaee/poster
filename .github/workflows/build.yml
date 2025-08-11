@@ -8,11 +8,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - run: rustup update
-      - run: cargo build --release
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Update Rust toolchain
+        run: rustup update
+      - name: Build release binaries
+        run: cargo build --release
       - name: Archive binaries
-        run: tar -czvf linux-binaries.tar.gz -C ./target/release/poster .
+        run: tar -czvf linux-binaries.tar.gz -C ./target/release poster
       - name: Upload binaries to release
         uses: softprops/action-gh-release@v2
         with:
