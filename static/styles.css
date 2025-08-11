@@ -25,12 +25,18 @@
     font-size: var(--size-md);
     line-height: var(--size-lg);
 
+    box-sizing: border-box;
+
     margin: 0;
     padding: 0;
 }
 
 body {
+    width: 100%;
+
     background-color: var(--bg-500);
+
+    overflow-x: hidden;    
 }
 
 h1, h2, h3, h4, h5, h6, p, li, pre, code {
