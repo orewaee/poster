@@ -2,7 +2,7 @@ use std::fs;
 
 use askama::Template;
 use axum::{Router, extract::Path, response::Html, routing::get};
-use markdown::{Constructs, Options, ParseOptions};
+use comrak::Options;
 use tower_http::services::ServeDir;
 
 use crate::app::{error::ApiError, params::HttpParams};
@@ -24,6 +24,7 @@ pub async fn run(params: HttpParams) {
 #[derive(Template)]
 #[template(path = "post.html")]
 struct PostTemplate {
+    id: String,
     content: String,
 }
 
@@ -31,24 +32,11 @@ async fn handle_post(Path(id): Path<String>) -> Result<Html<String>, ApiError> {
     let path = format!("posts/{}.md", id);
     match fs::read_to_string(&path) {
         Ok(content) => {
-            let options = &markdown::Options {
-                parse: ParseOptions {
-                    constructs: Constructs {
-                        code_text: true,
-                        math_text: true,
-                        math_flow: true,
-                        heading_atx: true,
-                        label_start_image: true,
-                        ..Constructs::default()
-                    },
-                    ..ParseOptions::default()
-                },
-                ..Options::default()
-            };
+            let content = comrak::markdown_to_html(&content, &Options::default());
 
-            let content = markdown::to_html_with_options(&content, options).unwrap();
-            let hello = PostTemplate { content };
-            Ok(Html(hello.render().unwrap()))
+            // let content = markdown::to_html_with_options(&content, options).unwrap();
+            let template = PostTemplate { id, content };
+            Ok(Html(template.render().unwrap()))
         }
         Err(_) => Err(ApiError::PostNotFound),
     }
