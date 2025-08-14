@@ -34,7 +34,6 @@ async fn handle_post(Path(id): Path<String>) -> Result<Html<String>, ApiError> {
         Ok(content) => {
             let content = comrak::markdown_to_html(&content, &Options::default());
 
-            // let content = markdown::to_html_with_options(&content, options).unwrap();
             let template = PostTemplate { id, content };
             Ok(Html(template.render().unwrap()))
         }

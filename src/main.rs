@@ -1,3 +1,6 @@
+use std::os::macos::raw::stat;
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 use crate::app::http;
@@ -21,6 +24,9 @@ pub enum Commands {
 
         #[arg(long)]
         port: Option<u16>,
+
+        #[arg(long)]
+        static_path: Option<String>,
     },
     Init {},
 }
@@ -29,7 +35,11 @@ pub enum Commands {
 async fn main() {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Run { host, port } => {
+        Commands::Run {
+            host,
+            port,
+            static_path,
+        } => {
             let mut params_builder = HttpParamsBuilder::new();
 
             if let Some(host) = host {
@@ -40,6 +50,12 @@ async fn main() {
 
             if let Some(port) = port {
                 params_builder.port(*port).expect("failed to set port");
+            }
+
+            if let Some(static_path) = static_path {
+                params_builder
+                    .static_path(PathBuf::from(static_path))
+                    .expect("failed to set static path");
             }
 
             let params = params_builder.build().expect("failed to build params");
