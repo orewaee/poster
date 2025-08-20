@@ -4,7 +4,10 @@ use askama::Template;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode, header::COOKIE},
+    http::{
+        HeaderMap, StatusCode,
+        header::{self, COOKIE},
+    },
     response::{AppendHeaders, Html, IntoResponse},
     routing::{get, post},
 };
@@ -116,16 +119,27 @@ async fn handle_login(
 
     match state.post_repository.get_by_id(request.id.clone()).await {
         Ok(post) => {
-            if post.password == request.password {
-                state.add_session(session_id.as_str(), &post.id);
+            dbg!(post.clone());
 
+            if post.password == request.password {
+                dbg!("eq passwords");
+                state.add_session(session_id.as_str(), &post.id);
+                state.println();
+                dbg!("add session end");
                 (
                     StatusCode::OK,
-                    AppendHeaders([("HX-Refresh", "true")]),
+                    AppendHeaders([
+                        ("hx-refresh", "true"),
+                        (
+                            "set-cookie",
+                            format!("session_id={session_id}; HttpOnly; Secure; Path=/").as_str(),
+                        ),
+                    ]),
                     "Login successful",
                 )
                     .into_response()
             } else {
+                dbg!("neq passwords");
                 (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
             }
         }
@@ -139,17 +153,15 @@ async fn handle_post(
     headers: HeaderMap,
 ) -> Result<Html<String>, ApiError> {
     let session_id = extract_cookie(headers, "session_id");
-    if session_id.is_none() {
-        return Err(ApiError::Unauthorized);
+    if session_id.is_none() || !state.has_session(session_id.clone().unwrap().as_str(), &id) {
+        return Ok(Html(PasswordTemplate { id }.render().unwrap()));
     }
 
-    let session_id = session_id.unwrap();
+    let session_id = session_id.clone().unwrap();
 
     // TODO: check post.password is None
 
-    if !state.has_session(session_id.as_str(), &id) {
-        return Ok(Html(PasswordTemplate { id }.render().unwrap()));
-    }
+    if !state.has_session(session_id.as_str(), &id) {}
 
     match state.post_repository.as_ref().get_by_id(id).await {
         Ok(post) => {

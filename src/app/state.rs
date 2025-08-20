@@ -37,4 +37,11 @@ impl AppState {
             .or_insert_with(Vec::new)
             .push(post_id.to_string());
     }
+
+    pub fn println(&self) {
+        let sessions = self.sessions.lock().unwrap();
+        for (k, v) in sessions.iter() {
+            println!("{k}: {:?}", v);
+        }
+    }
 }
