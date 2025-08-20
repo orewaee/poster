@@ -26,6 +26,18 @@ impl std::fmt::Display for SessionId {
     }
 }
 
+impl From<String> for SessionId {
+    fn from(value: String) -> Self {
+        SessionId(Uuid::parse_str(&value).unwrap())
+    }
+}
+
+impl Into<String> for SessionId {
+    fn into(self) -> String {
+        self.0.to_string()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SessionData {
     pub authorized_posts: HashSet<PostId>,

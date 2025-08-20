@@ -1,22 +1,22 @@
-use std::{collections::HashMap, fs, sync::Arc};
+use std::{collections::HashMap, fs};
 
 use askama::Template;
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::{HeaderMap, StatusCode, header::COOKIE},
-    response::{AppendHeaders, Html, IntoResponse},
+    response::{AppendHeaders, Html, IntoResponse, Response},
     routing::{get, post},
 };
 use comrak::Options;
 use serde::Deserialize;
 use sqlx::sqlite::SqlitePoolOptions;
 use tower_http::services::ServeDir;
-use uuid::Uuid;
 
 use crate::{
     app::{error::ApiError, params::HttpParams, state::AppState},
     post::{sqlite::SqlitePostRepository, traits::PostRepository},
+    session::{entity::SessionId, store::MemorySessionStore},
 };
 
 pub async fn run(params: HttpParams) {
@@ -38,8 +38,10 @@ pub async fn run(params: HttpParams) {
     let post_repository = SqlitePostRepository::new(pool)
         .await
         .expect("failed to create sqlite repository");
-    let app_state = AppState::new(Arc::new(post_repository));
-    // app_state.load_test_sessions();
+
+    let session_store = MemorySessionStore::new();
+
+    let app_state = AppState::new(post_repository, session_store);
     let static_service = ServeDir::new(params.static_path);
     let router = Router::new()
         .nest_service("/static", static_service)
@@ -105,36 +107,44 @@ async fn handle_login(
     headers: HeaderMap,
     State(state): State<AppState>,
     Json(request): Json<LoginRequest>,
-) -> impl IntoResponse {
+) -> Response {
     dbg!(request.clone());
 
-    let session_id = if let Some(session_id) = extract_cookie(headers, "session_id") {
-        session_id
-    } else {
-        Uuid::new_v4().to_string()
-    };
+    let session_id: Option<SessionId> =
+        if let Some(session_id) = extract_cookie(headers, "session_id") {
+            Some(session_id.into())
+        } else {
+            None
+        };
 
     match state.post_repository.get_by_id(request.id.clone()).await {
         Ok(post) => {
             dbg!(post.clone());
 
             if post.password == request.password {
-                dbg!("eq passwords");
-                state.add_session(session_id.as_str(), &post.id);
-                state.println();
-                dbg!("add session end");
-                (
-                    StatusCode::OK,
-                    AppendHeaders([
-                        ("hx-refresh", "true"),
-                        (
-                            "set-cookie",
-                            format!("session_id={session_id}; HttpOnly; Secure; Path=/").as_str(),
-                        ),
-                    ]),
-                    "Login successful",
-                )
-                    .into_response()
+                match state.session_store.create(session_id, post.id.into()) {
+                    Ok(session_id) => (
+                        StatusCode::OK,
+                        AppendHeaders([
+                            ("hx-refresh", "true"),
+                            (
+                                "set-cookie",
+                                format!(
+                                    "session_id={}; HttpOnly; Secure; Path=/",
+                                    session_id.to_string()
+                                )
+                                .as_str(),
+                            ),
+                        ]),
+                        "Login successful",
+                    )
+                        .into_response(),
+                    Err(error) => (
+                        StatusCode::UNAUTHORIZED,
+                        format!("failed to create session: {}", error),
+                    )
+                        .into_response(),
+                }
             } else {
                 dbg!("neq passwords");
                 (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
@@ -149,16 +159,23 @@ async fn handle_post(
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Html<String>, ApiError> {
-    let session_id = extract_cookie(headers, "session_id");
-    if session_id.is_none() || !state.has_session(session_id.clone().unwrap().as_str(), &id) {
+    let session_id: Option<SessionId> =
+        if let Some(session_id) = extract_cookie(headers, "session_id") {
+            Some(session_id.into())
+        } else {
+            None
+        };
+
+    if session_id.is_none()
+        || !state
+            .session_store
+            .authorized(session_id.unwrap(), id.clone().into())
+            .unwrap()
+    {
         return Ok(Html(PasswordTemplate { id }.render().unwrap()));
     }
 
-    let session_id = session_id.clone().unwrap();
-
     // TODO: check post.password is None
-
-    if !state.has_session(session_id.as_str(), &id) {}
 
     match state.post_repository.as_ref().get_by_id(id).await {
         Ok(post) => {
@@ -179,6 +196,6 @@ async fn handle_post(
                 Err(_) => Err(ApiError::PostNotFound),
             };
         }
-        Err(error) => Err(ApiError::PostNotFound),
+        Err(_) => Err(ApiError::PostNotFound),
     }
 }
