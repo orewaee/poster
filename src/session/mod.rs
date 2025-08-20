@@ -1,3 +1,6 @@
+pub mod entity;
+pub mod store;
+
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, RwLock},

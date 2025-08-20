@@ -4,10 +4,7 @@ use askama::Template;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{
-        HeaderMap, StatusCode,
-        header::{self, COOKIE},
-    },
+    http::{HeaderMap, StatusCode, header::COOKIE},
     response::{AppendHeaders, Html, IntoResponse},
     routing::{get, post},
 };
@@ -41,7 +38,7 @@ pub async fn run(params: HttpParams) {
     let post_repository = SqlitePostRepository::new(pool)
         .await
         .expect("failed to create sqlite repository");
-    let mut app_state = AppState::new(Arc::new(post_repository));
+    let app_state = AppState::new(Arc::new(post_repository));
     // app_state.load_test_sessions();
     let static_service = ServeDir::new(params.static_path);
     let router = Router::new()
