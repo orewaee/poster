@@ -15,7 +15,7 @@ use tower_http::services::ServeDir;
 
 use crate::{
     app::{error::ApiError, params::HttpParams, state::AppState},
-    post::{sqlite::SqlitePostRepository, traits::PostRepository},
+    post::store::{PostStore, SqlitePostStore},
     session::{entity::SessionId, store::MemorySessionStore},
 };
 
@@ -35,13 +35,12 @@ pub async fn run(params: HttpParams) {
         }
     };
 
-    let post_repository = SqlitePostRepository::new(pool)
+    let post_store = SqlitePostStore::new(pool)
         .await
         .expect("failed to create sqlite repository");
-
     let session_store = MemorySessionStore::new();
+    let app_state = AppState::new(post_store, session_store);
 
-    let app_state = AppState::new(post_repository, session_store);
     let static_service = ServeDir::new(params.static_path);
     let router = Router::new()
         .nest_service("/static", static_service)
@@ -68,6 +67,10 @@ struct PostTemplate {
 struct PasswordTemplate {
     id: String,
 }
+
+#[derive(Template)]
+#[template(path = "not-found.html")]
+struct NotFoundTemplate;
 
 fn extract_cookie(headers: HeaderMap, name: &str) -> Option<String> {
     if let Some(cookies) = headers.get(COOKIE) {
@@ -108,8 +111,6 @@ async fn handle_login(
     State(state): State<AppState>,
     Json(request): Json<LoginRequest>,
 ) -> Response {
-    dbg!(request.clone());
-
     let session_id: Option<SessionId> =
         if let Some(session_id) = extract_cookie(headers, "session_id") {
             Some(session_id.into())
@@ -117,11 +118,12 @@ async fn handle_login(
             None
         };
 
-    match state.post_repository.get_by_id(request.id.clone()).await {
+    match state.post_store.get_by_id(request.id.clone().into()).await {
         Ok(post) => {
-            dbg!(post.clone());
-
-            if post.password == request.password {
+            if post
+                .password
+                .is_some_and(|password| password == request.password)
+            {
                 match state.session_store.create(session_id, post.id.into()) {
                     Ok(session_id) => (
                         StatusCode::OK,
@@ -146,7 +148,6 @@ async fn handle_login(
                         .into_response(),
                 }
             } else {
-                dbg!("neq passwords");
                 (StatusCode::UNAUTHORIZED, "Invalid password").into_response()
             }
         }
@@ -159,43 +160,57 @@ async fn handle_post(
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Html<String>, ApiError> {
-    let session_id: Option<SessionId> =
-        if let Some(session_id) = extract_cookie(headers, "session_id") {
-            Some(session_id.into())
-        } else {
-            None
-        };
-
-    if session_id.is_none()
-        || !state
-            .session_store
-            .authorized(session_id.unwrap(), id.clone().into())
-            .unwrap()
-    {
-        return Ok(Html(PasswordTemplate { id }.render().unwrap()));
-    }
-
-    // TODO: check post.password is None
-
-    match state.post_repository.as_ref().get_by_id(id).await {
+    return match state.post_store.as_ref().get_by_id(id.clone().into()).await {
         Ok(post) => {
-            let path = format!("posts/{}.md", post.id);
-            dbg!(path.clone());
-            dbg!(post.clone());
-            return match fs::read_to_string(&path) {
-                Ok(content) => {
-                    dbg!(content.clone());
-                    let content = comrak::markdown_to_html(&content, &Options::default());
-                    let template = PostTemplate {
-                        id: post.id,
-                        content,
+            if post.password.is_none() {
+                let path = format!("posts/{}.md", post.id);
+                return match fs::read_to_string(&path) {
+                    Ok(content) => {
+                        let content = comrak::markdown_to_html(&content, &Options::default());
+                        let template = PostTemplate {
+                            id: post.id.into(),
+                            content,
+                        };
+
+                        Ok(Html(template.render().unwrap()))
+                    }
+                    Err(_) => Err(ApiError::PostNotFound),
+                };
+            } else {
+                let session_id: Option<SessionId> =
+                    if let Some(session_id) = extract_cookie(headers, "session_id") {
+                        Some(session_id.into())
+                    } else {
+                        None
                     };
 
-                    Ok(Html(template.render().unwrap()))
+                if session_id.is_none()
+                    || !state
+                        .session_store
+                        .authorized(session_id.unwrap(), id.clone().into())
+                        .unwrap()
+                {
+                    return Ok(Html(PasswordTemplate { id }.render().unwrap()));
                 }
-                Err(_) => Err(ApiError::PostNotFound),
-            };
+
+                let path = format!("posts/{}.md", post.id);
+                return match fs::read_to_string(&path) {
+                    Ok(content) => {
+                        let content = comrak::markdown_to_html(&content, &Options::default());
+                        let template = PostTemplate {
+                            id: post.id.into(),
+                            content,
+                        };
+
+                        Ok(Html(template.render().unwrap()))
+                    }
+                    Err(_) => Err(ApiError::PostNotFound),
+                };
+            }
         }
-        Err(_) => Err(ApiError::PostNotFound),
-    }
+        Err(error) => {
+            eprintln!("{}", error);
+            Ok(Html(NotFoundTemplate.render().unwrap()))
+        }
+    };
 }

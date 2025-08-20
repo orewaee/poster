@@ -1,8 +1,14 @@
+# Rust build artifacts
 /target
 
-/playground
+# User-generated content
 /posts
 
-poster.db
+# Env config and sensitive data
+.env
 
+# Database files
+*.db*
+
+# Deployment artifacts
 /.shuttle

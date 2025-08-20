@@ -21,7 +21,6 @@ pub trait SessionStore {
         session_id: Option<SessionId>,
         post_id: PostId,
     ) -> Result<SessionId, SessionStoreError>;
-
     fn authorized(&self, session_id: SessionId, post_id: PostId)
     -> Result<bool, SessionStoreError>;
 }

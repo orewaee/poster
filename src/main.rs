@@ -7,9 +7,8 @@ use crate::app::http;
 use crate::app::params::HttpParamsBuilder;
 use crate::init::params::InitParamsBuilder;
 use crate::init::utils::init;
-use crate::post::entity::Post;
-use crate::post::sqlite::SqlitePostRepository;
-use crate::post::traits::PostRepository;
+use crate::post::entity::PostId;
+use crate::post::store::{PostStore, SqlitePostStore};
 
 mod app;
 mod init;
@@ -40,7 +39,7 @@ pub enum Commands {
     },
     Create {
         #[arg(long)]
-        id: String,
+        id: Option<PostId>,
 
         #[arg(long)]
         password: Option<String>,
@@ -105,15 +104,14 @@ async fn main() {
                 }
             };
 
-            let post_repository = SqlitePostRepository::new(pool)
+            let post_store = SqlitePostStore::new(pool)
                 .await
                 .expect("failed to create sqlite repository");
 
-            let id = post_repository
-                .create(Post {
-                    id: id.to_string(),
-                    password: password.clone().unwrap_or(String::from("topsecret")),
-                })
+            dbg!(id, password);
+
+            let id = post_store
+                .create(id.clone(), password.clone())
                 .await
                 .unwrap();
 

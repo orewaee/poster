@@ -1,6 +1,7 @@
+use sqlx::{FromRow, Sqlite, Type};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, sqlx::Encode, sqlx::Decode)]
 pub struct PostId(String);
 
 impl PostId {
@@ -11,7 +12,7 @@ impl PostId {
 
 impl Default for PostId {
     fn default() -> Self {
-        Self::new("")
+        Self::new(&Uuid::new_v4().to_string())
     }
 }
 
@@ -27,14 +28,30 @@ impl From<String> for PostId {
     }
 }
 
+impl<'a> From<&'a str> for PostId {
+    fn from(value: &'a str) -> Self {
+        PostId(value.to_string())
+    }
+}
+
 impl Into<String> for PostId {
     fn into(self) -> String {
         self.0
     }
 }
 
-#[derive(Debug, Clone, sqlx::FromRow)]
+impl Type<Sqlite> for PostId {
+    fn type_info() -> <Sqlite as sqlx::Database>::TypeInfo {
+        <String as Type<Sqlite>>::type_info()
+    }
+
+    fn compatible(ty: &<Sqlite as sqlx::Database>::TypeInfo) -> bool {
+        <String as Type<Sqlite>>::compatible(ty)
+    }
+}
+
+#[derive(Debug, Clone, FromRow)]
 pub struct Post {
-    pub id: String,
-    pub password: String,
+    pub id: PostId,
+    pub password: Option<String>,
 }
