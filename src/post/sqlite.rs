@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use crate::post::entity::Post;
 use crate::post::traits::PostRepository;
 use sqlx::SqlitePool;

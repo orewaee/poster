@@ -1426,6 +1426,7 @@ dependencies = [
  "axum",
  "clap",
  "comrak",
+ "serde",
  "sqlx",
  "tokio",
  "tower-http",
