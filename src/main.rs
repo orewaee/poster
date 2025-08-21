@@ -44,6 +44,10 @@ pub enum Commands {
         #[arg(long)]
         password: Option<String>,
     },
+    Delete {
+        #[arg(long)]
+        id: PostId,
+    },
 }
 
 #[tokio::main]
@@ -108,14 +112,39 @@ async fn main() {
                 .await
                 .expect("failed to create sqlite repository");
 
-            dbg!(id, password);
-
             let id = post_store
                 .create(id.clone(), password.clone())
                 .await
                 .unwrap();
 
             println!("id of created post: {}", id);
+        }
+        Commands::Delete { id } => {
+            let database_url =
+                std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+            let pool = match SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await
+            {
+                Ok(pool) => pool,
+                Err(e) => {
+                    eprintln!("failed to connect to database: {}", e);
+                    return;
+                }
+            };
+
+            let post_store = SqlitePostStore::new(pool)
+                .await
+                .expect("failed to create sqlite repository");
+
+            let success = post_store.delete_by_id(id.clone()).await.unwrap();
+            if success {
+                println!("post {id} deleted successfully");
+            } else {
+                println!("failed to delete post {id}");
+            }
         }
     }
 }

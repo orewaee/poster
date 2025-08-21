@@ -22,6 +22,7 @@ pub trait PostStore {
         password: Option<String>,
     ) -> Result<PostId, PostStoreError>;
     async fn get_by_id(&self, id: PostId) -> Result<Post, PostStoreError>;
+    async fn delete_by_id(&self, id: PostId) -> Result<bool, PostStoreError>;
 }
 
 pub struct SqlitePostStore {
@@ -50,7 +51,6 @@ impl PostStore for SqlitePostStore {
         password: Option<String>,
     ) -> Result<PostId, PostStoreError> {
         let id = id.unwrap_or_default();
-        dbg!(id.clone(), password.clone());
         if let Some(error) = sqlx::query("INSERT INTO posts (id, password) VALUES ($1, $2)")
             .bind(id.clone())
             .bind(password)
@@ -76,6 +76,20 @@ impl PostStore for SqlitePostStore {
             Ok(post)
         } else {
             Err(PostStoreError::PostNotFound)
+        }
+    }
+
+    async fn delete_by_id(&self, id: PostId) -> Result<bool, PostStoreError> {
+        if let Some(error) = sqlx::query("DELETE FROM posts WHERE id = ?")
+            .bind(id.clone())
+            .execute(&self.pool)
+            .await
+            .err()
+        {
+            eprintln!("{}", error);
+            Err(PostStoreError::FailedToCreatePost(error.to_string()))
+        } else {
+            Ok(true)
         }
     }
 }
