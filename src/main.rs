@@ -1,15 +1,19 @@
-use std::os::macos::raw::stat;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
+use sqlx::sqlite::SqlitePoolOptions;
 
 use crate::app::http;
 use crate::app::params::HttpParamsBuilder;
 use crate::init::params::InitParamsBuilder;
 use crate::init::utils::init;
+use crate::post::entity::PostId;
+use crate::post::store::{PostStore, SqlitePostStore};
 
 mod app;
 mod init;
+mod post;
+mod session;
 
 #[derive(Parser)]
 pub struct Cli {
@@ -32,6 +36,17 @@ pub enum Commands {
     Init {
         #[arg(long)]
         static_path: Option<String>,
+    },
+    Create {
+        #[arg(long)]
+        id: Option<PostId>,
+
+        #[arg(long)]
+        password: Option<String>,
+    },
+    Delete {
+        #[arg(long)]
+        id: PostId,
     },
 }
 
@@ -76,6 +91,60 @@ async fn main() {
 
             let params = params_builder.build().expect("failed to build params");
             init(params).expect("failed to init");
+        }
+        Commands::Create { id, password } => {
+            let database_url =
+                std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+            let pool = match SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await
+            {
+                Ok(pool) => pool,
+                Err(e) => {
+                    eprintln!("failed to connect to database: {}", e);
+                    return;
+                }
+            };
+
+            let post_store = SqlitePostStore::new(pool)
+                .await
+                .expect("failed to create sqlite repository");
+
+            let id = post_store
+                .create(id.clone(), password.clone())
+                .await
+                .unwrap();
+
+            println!("id of created post: {}", id);
+        }
+        Commands::Delete { id } => {
+            let database_url =
+                std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+            let pool = match SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&database_url)
+                .await
+            {
+                Ok(pool) => pool,
+                Err(e) => {
+                    eprintln!("failed to connect to database: {}", e);
+                    return;
+                }
+            };
+
+            let post_store = SqlitePostStore::new(pool)
+                .await
+                .expect("failed to create sqlite repository");
+
+            let success = post_store.delete_by_id(id.clone()).await.unwrap();
+            if success {
+                println!("post {id} deleted successfully");
+            } else {
+                println!("failed to delete post {id}");
+            }
         }
     }
 }
