@@ -71,7 +71,7 @@
             overflow-x: hidden;    
         }
 
-        h1, h2, h3, h4, h5, h6, p, li, pre, code {
+        h1, h2, h3, h4, h5, h6, p, li, pre, code, th, td {
             font-family: "JetBrains Mono", monospace;
             font-weight: 400;
             font-style: normal;
@@ -179,6 +179,26 @@
 
             margin: 24px 0;
             padding: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--bg-200);
+        }
+
+        th {
+            background-color: var(--bg-400);
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background-color: var(--bg-400);
         }
 
         header {
