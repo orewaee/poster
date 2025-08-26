@@ -1,8 +1,11 @@
+.DS_Store
+
 # Rust build artifacts
 /target
 
 # User-generated content
 /posts
+/static/*.png
 
 # Env config and sensitive data
 .env
