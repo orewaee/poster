@@ -23,5 +23,4 @@
 * [ ] tui?
     * [ ] statistics and analisis
     * [ ] logs
-    * [ ]
 * [ ] docs

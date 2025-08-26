@@ -8,7 +8,7 @@ use axum::{
     response::{AppendHeaders, Html, IntoResponse, Response},
     routing::{get, post},
 };
-use comrak::Options;
+use comrak::{ExtensionOptions, Options, ParseOptions, RenderOptions};
 use serde::Deserialize;
 use sqlx::sqlite::SqlitePoolOptions;
 use tower_http::services::ServeDir;
@@ -60,6 +60,7 @@ pub async fn run(params: HttpParams) {
 struct PostTemplate {
     id: String,
     content: String,
+    with_password: bool,
 }
 
 #[derive(Template)]
@@ -166,10 +167,29 @@ async fn handle_post(
                 let path = format!("posts/{}.md", post.id);
                 return match fs::read_to_string(&path) {
                     Ok(content) => {
-                        let content = comrak::markdown_to_html(&content, &Options::default());
+                        let content = comrak::markdown_to_html(
+                            &content,
+                            &Options {
+                                extension: ExtensionOptions {
+                                    table: true,
+                                    autolink: true,
+                                    header_ids: Some(String::new()),
+                                    wikilinks_title_after_pipe: true,
+                                    spoiler: true,
+                                    ..Default::default()
+                                },
+                                render: RenderOptions {
+                                    gfm_quirks: true,
+                                    tasklist_classes: true,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                        );
                         let template = PostTemplate {
                             id: post.id.into(),
                             content,
+                            with_password: true,
                         };
 
                         Ok(Html(template.render().unwrap()))
@@ -200,6 +220,7 @@ async fn handle_post(
                         let template = PostTemplate {
                             id: post.id.into(),
                             content,
+                            with_password: false,
                         };
 
                         Ok(Html(template.render().unwrap()))
