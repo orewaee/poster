@@ -3,12 +3,14 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct InitParams {
     pub static_path: PathBuf,
+    pub database_path: PathBuf,
 }
 
 impl Default for InitParams {
     fn default() -> Self {
         Self {
             static_path: PathBuf::from("static"),
+            database_path: PathBuf::from("poster.db"),
         }
     }
 }
@@ -29,6 +31,11 @@ impl InitParamsBuilder {
 
     pub fn static_path(&mut self, path: PathBuf) -> Result<&mut Self, InitParamsError> {
         self.params.static_path = path;
+        Ok(self)
+    }
+
+    pub fn database_path(&mut self, path: PathBuf) -> Result<&mut Self, InitParamsError> {
+        self.params.database_path = path;
         Ok(self)
     }
 

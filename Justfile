@@ -1,4 +1,5 @@
-database_url := env("DATABASE_URL", "poster.db")
+default_database_url := "poster.db"
+database_url := env("DATABASE_URL", default_database_url)
 
 dev-run:
-    DATABASE_URL={{database_url}} cargo run run
+    cargo run run {{ if database_url != default_database_url { "--database-url " + database_url } else { "" } }}

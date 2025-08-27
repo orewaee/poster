@@ -20,12 +20,9 @@ use crate::{
 };
 
 pub async fn run(params: HttpParams) {
-    let database_url =
-        std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-
     let pool = match SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(&database_url)
+        .connect(&params.database_url)
         .await
     {
         Ok(pool) => pool,

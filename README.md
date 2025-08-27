@@ -15,8 +15,8 @@
         * [ ] http router
         * [ ] http handlers
 * [ ] cli
-    * [ ] database location flag
-    * [ ] init database
+    * [x] database location flag
+    * [x] init database
     * [ ] verbose flag for all commands
 * [ ] logs
 * [ ] collect statistics for analisis

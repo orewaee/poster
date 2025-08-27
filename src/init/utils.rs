@@ -8,6 +8,11 @@ pub fn init(params: InitParams) -> Result<(), InitError> {
     fs::create_dir(&params.static_path)
         .map_err(|_| InitError::FailedToCreateDir)
         .expect("failed to create static dir");
+    fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(params.database_path.as_path())
+        .unwrap();
     fs::create_dir("templates")
         .map_err(|_| InitError::FailedToCreateDir)
         .expect("failed to create templates dir");

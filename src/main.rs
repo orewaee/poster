@@ -32,10 +32,16 @@ pub enum Commands {
 
         #[arg(long)]
         static_path: Option<String>,
+
+        #[arg(long)]
+        database_url: Option<String>,
     },
     Init {
         #[arg(long)]
         static_path: Option<String>,
+
+        #[arg(long)]
+        database_path: Option<String>,
     },
     Create {
         #[arg(long)]
@@ -58,6 +64,7 @@ async fn main() {
             host,
             port,
             static_path,
+            database_url,
         } => {
             let mut params_builder = HttpParamsBuilder::new();
 
@@ -77,16 +84,31 @@ async fn main() {
                     .expect("failed to set static path");
             }
 
+            if let Some(database_url) = database_url {
+                params_builder
+                    .database_url(database_url.to_string())
+                    .expect("failed to set database url");
+            }
+
             let params = params_builder.build().expect("failed to build params");
             http::run(params).await;
         }
-        Commands::Init { static_path } => {
+        Commands::Init {
+            static_path,
+            database_path,
+        } => {
             let mut params_builder = InitParamsBuilder::new();
 
             if let Some(static_path) = static_path {
                 params_builder
                     .static_path(PathBuf::from(static_path))
                     .expect("failed to set static path");
+            }
+
+            if let Some(database_path) = database_path {
+                params_builder
+                    .database_path(PathBuf::from(database_path))
+                    .expect("failed to set database path");
             }
 
             let params = params_builder.build().expect("failed to build params");

@@ -41,6 +41,9 @@ impl Into<String> for SessionId {
 #[derive(Debug, Clone)]
 pub struct SessionData {
     pub authorized_posts: HashSet<PostId>,
+
+    // TODO: use or remove
+    #[allow(dead_code)]
     pub created_at: Instant,
 }
 

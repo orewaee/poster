@@ -5,6 +5,7 @@ pub struct HttpParams {
     pub host: String,
     pub port: u16,
     pub static_path: PathBuf,
+    pub database_url: String,
 }
 
 impl Default for HttpParams {
@@ -13,6 +14,7 @@ impl Default for HttpParams {
             host: String::from("127.0.0.1"),
             port: 2201,
             static_path: PathBuf::from("static"),
+            database_url: String::from("sqlite:poster.db"),
         }
     }
 }
@@ -54,6 +56,11 @@ impl HttpParamsBuilder {
 
     pub fn static_path(&mut self, path: PathBuf) -> Result<&mut Self, HttpParamsError> {
         self.params.static_path = path;
+        Ok(self)
+    }
+
+    pub fn database_url(&mut self, database_url: String) -> Result<&mut Self, HttpParamsError> {
+        self.params.database_url = format!("sqlite:{database_url}");
         Ok(self)
     }
 
