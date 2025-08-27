@@ -8,7 +8,7 @@ use axum::{
     response::{AppendHeaders, Html, IntoResponse, Response},
     routing::{get, post},
 };
-use comrak::{ExtensionOptions, Options, ParseOptions, RenderOptions};
+use comrak::{ExtensionOptions, Options, RenderOptions};
 use serde::Deserialize;
 use sqlx::sqlite::SqlitePoolOptions;
 use tower_http::services::ServeDir;

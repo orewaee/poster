@@ -10,9 +10,6 @@ use crate::session::entity::{SessionData, SessionId};
 pub enum SessionStoreError {
     #[error("lock poisoned: {0}")]
     LockPoisoned(String),
-
-    #[error("unexpected error")]
-    Unexpected,
 }
 
 pub trait SessionStore {

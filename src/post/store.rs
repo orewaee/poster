@@ -10,9 +10,6 @@ pub enum PostStoreError {
 
     #[error("failed to create post: {0}")]
     FailedToCreatePost(String),
-
-    #[error("unexpected error")]
-    Unexpected,
 }
 
 pub trait PostStore {
